@@ -1,0 +1,28 @@
+{
+  "name": "sga-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "nodemon src/index.ts"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "5.0.1",
+    "mysql2": "^3.11.5",
+    "sequelize": "^6.37.5"
+  },
+  "devDependencies": {
+    "@types/express": "5.0.0",
+    "@types/node": "22.10.2",
+    "eslint": "^9.17.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "nodemon": "3.1.9",
+    "prettier": "^3.4.2",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.2"
+  }
+}
