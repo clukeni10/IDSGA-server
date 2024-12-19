@@ -22,6 +22,24 @@ try {
     console.error('Unable to connect to the database:', error);
 }
 
+const Escorts = sequelize.define(
+    'escorts',
+    {
+        personEscort: {
+            type: DataTypes.STRING
+        }
+    }
+);
+
+const Functions = sequelize.define(
+    'functions',
+    {
+        personFunction: {
+            type: DataTypes.STRING
+        }
+    }
+);
+
 const Card = sequelize.define(
     'cards',
     {
@@ -43,6 +61,10 @@ const Person = sequelize.define(
         },
         job: {
             type: DataTypes.STRING
+        },
+        escort: {
+            type: DataTypes.STRING,
+            allowNull: false,
         }
     }
 );
@@ -57,12 +79,37 @@ Card.belongsTo(Person, {
 
 Person.sync()
 Card.sync()
+Functions.sync()
+Escorts.sync()
 
 app.post('/card/save', async (req: Request<{}, {}, PersonType & CardType>, res: Response) => {
     try {
         const body = req.body
-        const person = await Person.create({ name: body.name, job: body.job })
+        const person = await Person.create({ name: body.name, job: body.job, escort: body.escort })
         await Card.create({ expiration: body.expiration, cardNumber: body.cardNumber, personId: person.dataValues.id });
+
+        res.status(200).json({ success: true })
+    } catch (error) {
+        res.status(501).send(error)
+    }
+});
+
+app.post('/setup/function/save', async (req: Request<{}, {}, { personFunction: string }>, res: Response) => {
+    try {
+        const body = req.body
+        console.log(body)
+        await Functions.create({ personFunction: body.personFunction })
+
+        res.status(200).json({ success: true })
+    } catch (error) {
+        res.status(501).send(error)
+    }
+});
+
+app.post('/setup/escort/save', async (req: Request<{}, {}, { personEscort: string }>, res: Response) => {
+    try {
+        const body = req.body
+        await Escorts.create({ personEscort: body.personEscort })
 
         res.status(200).json({ success: true })
     } catch (error) {
@@ -79,6 +126,15 @@ app.get('/card/getAll', async (_: Request, res: Response) => {
     })
 
     res.status(200).json(persons)
+})
+app.get('/setup/function/getAll', async (_: Request, res: Response) => {
+    const funs = await Functions.findAll<Model<{ personFunction: string }>>()
+    res.status(200).json(funs)
+})
+
+app.get('/setup/escort/getAll', async (_: Request, res: Response) => {
+    const escorts = await Escorts.findAll<Model<{ personEscort: string }>>()
+    res.status(200).json(escorts)
 })
 
 app.listen(port, () => {

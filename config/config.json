@@ -1,0 +1,23 @@
+{
+  "development": {
+    "username": "root",
+    "password": "sga_card",
+    "database": "sga_cards_development",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "test": {
+    "username": "root",
+    "password": "sga_card",
+    "database": "sga_cards_test",
+    "host": "127.0.0.1",
+    "dialect": "mysql"
+  },
+  "production": {
+    "username": "root",
+    "password": "sga-card",
+    "database": "sga_cards",
+    "host": "localhost",
+    "dialect": "mysql"
+  }
+}
