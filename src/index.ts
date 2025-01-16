@@ -3,6 +3,7 @@ import { DataTypes, Model, Sequelize } from 'sequelize'
 import dotenv from 'dotenv';
 import { PersonType } from './types/PersonType';
 import { CardType } from './types/CardType';
+import { EntityType } from './types/EntityType';
 dotenv.config();
 
 const port = process.env.PORT || 3000;
@@ -69,6 +70,34 @@ const Person = sequelize.define(
     }
 );
 
+const Entity = sequelize.define(
+    'entities',
+    {
+        name: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        }
+    }
+);
+
+const CardsIssues = sequelize.define(
+    'cards_issues',
+    {
+        cardId: {
+            type: DataTypes.STRING,
+            allowNull: false,
+        }
+    }
+);
+
+Person.belongsTo(Entity, {
+    foreignKey: {
+        name: 'entityId',
+        allowNull: false,
+    },
+    as: 'entity'
+});
+
 Card.belongsTo(Person, {
     foreignKey: {
         name: 'personId',
@@ -81,12 +110,29 @@ Person.sync()
 Card.sync()
 Functions.sync()
 Escorts.sync()
+Entity.sync()
+CardsIssues.sync()
 
 app.post('/card/save', async (req: Request<{}, {}, PersonType & CardType>, res: Response) => {
     try {
         const body = req.body
-        const person = await Person.create({ name: body.name, job: body.job, escort: body.escort })
+        const entity = await Entity.findOne<Model<{ name: string, id: number }>>({where: { name: body.entity }});
+        console.log(entity?.dataValues)
+        const data = entity?.dataValues;
+
+        const person = await Person.create({ name: body.name, job: body.job, escort: body.escort, entityId: data?.id })
         await Card.create({ expiration: body.expiration, cardNumber: body.cardNumber, personId: person.dataValues.id });
+
+        res.status(200).json({ success: true })
+    } catch (error) {
+        res.status(501).send(error)
+    }
+});
+
+app.post('/card/issue', async (req: Request<{}, {}, { cardId: string }>, res: Response) => {
+    try {
+        const body = req.body
+        await CardsIssues.create({ cardId: body.cardId });
 
         res.status(200).json({ success: true })
     } catch (error) {
@@ -117,11 +163,36 @@ app.post('/setup/escort/save', async (req: Request<{}, {}, { personEscort: strin
     }
 });
 
+app.post('/setup/entity/save', async (req: Request<{}, {}, { name: string }>, res: Response) => {
+    try {
+        const body = req.body;
+        await Entity.create({ name: body.name });
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(501).send(error);
+    }
+});
+
+app.get('/cardIssues/getAll', async (_: Request, res: Response) => {
+    const entities = await CardsIssues.findAll<Model<{ cardId: string }>>();
+    res.status(200).json(entities);
+});
+
+app.get('/setup/entity/getAll', async (_: Request, res: Response) => {
+    const entities = await Entity.findAll<Model<{ name: string }>>();
+    res.status(200).json(entities);
+});
+
 app.get('/card/getAll', async (_: Request, res: Response) => {
     const persons = await Card.findAll<Model<PersonType>>({
         include: {
             model: Person,
             as: 'person',
+            include: [{
+                model: Entity,
+                as: 'entity' 
+            }]
         },
     })
 
