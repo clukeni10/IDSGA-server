@@ -1,8 +1,9 @@
+import { VehicleType } from "./VehicleType";
+
 export type CardVehicleType = {
-    entity: string
-    brand: string;
+    vehicle: VehicleType
+    expiration: Date
     cardNumber: string;
-    color: string;
-    licensePlate: string;
-    type:string;
+    
+ 
 }

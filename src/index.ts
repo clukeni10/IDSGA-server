@@ -125,6 +125,10 @@ const CardVehicle = sequelize.define('card_vehicles', {
         type: DataTypes.STRING,
         allowNull: false
     },
+    expiration: {
+        type: DataTypes.DATE,
+        allowNull: false
+    },
     cardNumber: {
         type: DataTypes.STRING,
         allowNull: false
@@ -180,7 +184,7 @@ CardVehicle.belongsTo(Entity, {
     as: 'relatedEntity'
 });
 
-/*(async () => {
+ /*(async () => {
     await CardVehicle.sync({ alter: true }); // Adiciona colunas faltantes
     console.log("Tabela card_vehicles alterada com sucesso!");
 })(); */
@@ -290,7 +294,7 @@ app.post('/card-vehicle/save', async (req: Request<{}, {}, CardVehicleType>, res
         const body = req.body;
         console.log(body)
         
-        const entity = await Entity.findOne({ where: { name: body.entity } });
+        const entity = await Entity.findOne({ where: { name: body.vehicle.entity } });
 
         if (!entity) {
             res.status(404).json({ success: false, message: "Entity or Vehicle not found" });
@@ -298,13 +302,14 @@ app.post('/card-vehicle/save', async (req: Request<{}, {}, CardVehicleType>, res
         }
 
         await CardVehicle.create({
-            entity: body.entity,
-            brand: body.brand,
-            color: body.color,
+            entity: body.vehicle.entity,
+            brand: body.vehicle.brand,
+            color: body.vehicle.color,
             cardNumber: body.cardNumber,
-            licensePlate: body.licensePlate,
-            type: body.type,
-            entityId: entity.dataValues.id
+            licensePlate: body.vehicle.licensePlate,
+            type: body.vehicle.type,
+            entityId: entity.dataValues.id,
+            expiration: body.expiration,
         });
 
         res.status(200).json({ success: true });
@@ -328,8 +333,11 @@ app.put('/card-vehicle/save', async (req: Request<{}, {}, CardVehicleType & { li
             res.status(404).json({ success: false, message: "CardVehicle not found" });
             return;
         }
+        
+        
 
-        const entity = await Entity.findOne({ where: { name: body.entity } });
+
+        const entity = await Entity.findOne({ where: { name: body.vehicle.entity } });
 
         if (!entity) {
             res.status(404).json({ success: false, message: "Entity or Vehicle not found" });
@@ -337,12 +345,14 @@ app.put('/card-vehicle/save', async (req: Request<{}, {}, CardVehicleType & { li
         }
 
         await cardVehicle.update({
-            entity: body.entity,
-            brand: body.brand,
-            color: body.color,
-            licensePlate: body.licensePlate,
-            type: body.type,
-            entityId: entity.dataValues.id
+            entity: body.vehicle.entity,
+            brand: body.vehicle.brand,
+            color: body.vehicle.color,
+            licensePlate: body.vehicle.licensePlate,
+            type: body.vehicle.type,
+            entityId: entity.dataValues.id,
+            expiration: body.expiration,
+            
         });
 
         res.status(200).json({ success: true, message: "CardVehicle updated successfully" });
