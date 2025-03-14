@@ -1,11 +1,14 @@
 import express, { Request, Response } from 'express';
 import { DataTypes, Model, Sequelize } from 'sequelize'
 import dotenv from 'dotenv';
+import cors from 'cors';
 import multer from "multer"
 import fs from "fs"
 import { PersonType } from './types/PersonType';
 import { CardType } from './types/CardType';
 import path from 'path';
+import { CardVehicleType } from './types/CardVehicleType';
+
 
 dotenv.config();
 
@@ -18,7 +21,7 @@ const storage = multer.diskStorage({
         if (!fs.existsSync(uploadPath)) fs.mkdirSync(uploadPath);
         cb(null, uploadPath);
     },
-    filename: (req, file, cb) => {
+    filename: (_, file, cb) => {
         cb(null, `${Date.now()}-${file.originalname}`);
     }
 });
@@ -26,19 +29,18 @@ const upload = multer({ storage });
 
 app.use(express.json({ limit: '50mb' }));
 
+const corsOptions = {
+    origin: '*',
+    methods: 'GET, POST, PUT',
+    allowedHeaders: ['Content-Type', 'Authorization', 'api-key', 'user'],
+    credentials: true
+};
+
+app.use(cors(corsOptions));
+
 app.use('/uploads', express.static(path.resolve(__dirname, '../uploads')));
 
-/* app.use('/uploads', (req, res, next) => {
-    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.gif'];
-    if (allowedExtensions.includes(path.extname(req.url).toLowerCase())) {
-        express.static(path.join(__dirname, 'uploads'))(req, res, next);
-    } else {
-        res.status(403).send('Acesso negado.');
-    }
-}); */
-
-
-const sequelize = new Sequelize('sga_cards', 'root', 'sga-card', {
+const sequelize = new Sequelize('sga_cards', 'root', '12345', {
     host: 'localhost',
     dialect: 'mysql'
 });
@@ -114,12 +116,41 @@ const Permission = sequelize.define('permissions', {
     }
 });
 
+const CardVehicle = sequelize.define('card_vehicles', {
+    entity: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    brand: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    cardNumber: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    color: {
+        type: DataTypes.STRING,
+        allowNull: false
+    },
+    licensePlate: {
+        type: DataTypes.STRING,
+        allowNull: false,
+        unique: true
+    },
+    type: {
+        type: DataTypes.STRING,
+        allowNull: false
+    }
+});
+
 Entity.sync()
 Person.sync()
 Card.sync()
 Permission.sync()
 Functions.sync()
 Escorts.sync()
+CardVehicle.sync()
 
 Person.belongsTo(Entity, {
     foreignKey: {
@@ -141,11 +172,23 @@ const PersonPermissions = sequelize.define('person_permissions', {}, { timestamp
 Person.belongsToMany(Permission, { through: PersonPermissions });
 Permission.belongsToMany(Person, { through: PersonPermissions });
 
+CardVehicle.belongsTo(Entity, {
+    foreignKey: {
+        name: 'entityId',
+        allowNull: false
+    },
+    as: 'relatedEntity'
+});
 
-/* (async () => {
+/*(async () => {
+    await CardVehicle.sync({ alter: true }); // Adiciona colunas faltantes
+    console.log("Tabela card_vehicles alterada com sucesso!");
+})(); */
+
+/*(async () => {
     await sequelize.sync({ force: true }); 
 
-    // Inserir permissões
+    // Inserir permissÃµes
     const permissions = ['A', 'B', 'C', 'D', 'E', 'F'].map(permission => ({ permission }));
     await Permission.bulkCreate(permissions);
     await PersonPermissions.sync({ force: true });
@@ -189,8 +232,6 @@ app.put('/card/save', upload.single('image'), async (req: Request<{}, {}, Person
     try {
         const body = req.body;
         const imagePath = req.file ? req.file.path : null;
-
-        console.log('imagePath', imagePath, body.personId, body);
 
         if (!body.personId) {
             res.status(400).json({ success: false, message: "Person ID is required for update" });
@@ -241,6 +282,92 @@ app.put('/card/save', upload.single('image'), async (req: Request<{}, {}, Person
     } catch (error) {
         console.error(error);
         res.status(501).send(error)
+    }
+});
+
+app.post('/card-vehicle/save', async (req: Request<{}, {}, CardVehicleType>, res: Response): Promise<void> => {
+    try {
+        const body = req.body;
+        console.log(body)
+        
+        const entity = await Entity.findOne({ where: { name: body.entity } });
+
+        if (!entity) {
+            res.status(404).json({ success: false, message: "Entity or Vehicle not found" });
+            return;
+        }
+
+        await CardVehicle.create({
+            entity: body.entity,
+            brand: body.brand,
+            color: body.color,
+            cardNumber: body.cardNumber,
+            licensePlate: body.licensePlate,
+            type: body.type,
+            entityId: entity.dataValues.id
+        });
+
+        res.status(200).json({ success: true });
+    } catch (error) {
+        console.error(error);
+        res.status(501).send(error);
+    }
+});
+
+app.put('/card-vehicle/save', async (req: Request<{}, {}, CardVehicleType & { licensePlate: string }>, res: Response): Promise<void> => {
+    try {
+        const body = req.body;
+
+        console.log("UPDATE: ", body)
+
+        const cardVehicle = await CardVehicle.findOne({ 
+            where: { licensePlate: body.licensePlate }
+        });
+
+        if (!cardVehicle) {
+            res.status(404).json({ success: false, message: "CardVehicle not found" });
+            return;
+        }
+
+        const entity = await Entity.findOne({ where: { name: body.entity } });
+
+        if (!entity) {
+            res.status(404).json({ success: false, message: "Entity or Vehicle not found" });
+            return;
+        }
+
+        await cardVehicle.update({
+            entity: body.entity,
+            brand: body.brand,
+            color: body.color,
+            licensePlate: body.licensePlate,
+            type: body.type,
+            entityId: entity.dataValues.id
+        });
+
+        res.status(200).json({ success: true, message: "CardVehicle updated successfully" });
+    } catch (error) {
+        console.error(error);
+        res.status(501).send(error);
+    }
+});
+
+app.get('/card-vehicle/getAll', async (_: Request, res: Response) => {
+    try {
+        const cardVehicles = await CardVehicle.findAll({});
+        res.status(200).json(cardVehicles);
+    } catch (error) {
+        res.status(501).send(error);
+    }
+});
+
+
+app.post('/setup/vehicle/save', async (req: Request<{}, {}, { brand: string }>, res: Response) => {
+    try {
+        const { brand } = req.body;
+        res.status(200).json({ success: true });
+    } catch (error) {
+        res.status(501).send(error);
     }
 });
 
