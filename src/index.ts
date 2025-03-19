@@ -310,6 +310,7 @@ app.post('/card-vehicle/save', async (req: Request<{}, {}, CardVehicleType>, res
             type: body.vehicle.type,
             entityId: entity.dataValues.id,
             expiration: body.expiration,
+            permitType: body.permitType,
         });
 
         res.status(200).json({ success: true });
@@ -352,6 +353,7 @@ app.put('/card-vehicle/save', async (req: Request<{}, {}, CardVehicleType & { li
             type: body.vehicle.type,
             entityId: entity.dataValues.id,
             expiration: body.expiration,
+            permitType: body.permitType, 
             
         });
 
