@@ -6,4 +6,4 @@ export type VehicleType = {
     licensePlate:string;
     type:string;
 
-}
+} 
